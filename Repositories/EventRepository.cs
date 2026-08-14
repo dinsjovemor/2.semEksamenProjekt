@@ -19,8 +19,8 @@ namespace _2.semEksamenProjekt.Repositories
             command.Parameters.AddWithValue("@title", ev.title);
             command.Parameters.AddWithValue("@start", ev.start.ToString("yyyy-MM-dd HH:mm:ss"));
             command.Parameters.AddWithValue("@end", ev.end.ToString("yyyy-MM-dd HH:mm:ss"));
-            command.Parameters.AddWithValue("@description", ev.description ?? "");
-            command.Parameters.AddWithValue("@city", ev.city ?? "");
+            command.Parameters.AddWithValue("@description", ev.description); //fjernet ??, da jeg har været inde og lave ændringer til klasserne "description" og "city", så de som standard er oprettet som nye tomme lister
+            command.Parameters.AddWithValue("@city", ev.city);
 
             ev.id = Convert.ToInt32(command.ExecuteScalar());
 

@@ -6,16 +6,16 @@ namespace _2.semEksamenProjekt
     public class Event
     {
         public int id;
-        public string title;
-        public string description;
+        public string title = "";
+        public string description = "";
         public List<string> rooms;
         public DateTime start;
         public DateTime end;
         public Flow flowLink;
         public List<User> teachers;
-        public string city;
-        public List<Team> teams;
-        public List<string> tags;
+        public string city = String.Empty;
+        public List<Team> teams = new List<Team>();
+        public List<string> tags = new List<string>();
 
         // tilføjer event til event overviewet
         public void AddEvent(EventOverview overview)
