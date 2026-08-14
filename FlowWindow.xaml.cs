@@ -12,9 +12,14 @@ namespace _2.semEksamenProjekt
         SubFlowRepository subFlowRepository = new SubFlowRepository();
         List<SubFlow> allSubFlows;
 
-        public FlowWindow(Flow flow)
+        User currentUser;
+        UserRepository userRepository;
+
+        public FlowWindow(User u, UserRepository userRepo, Flow flow)
         {
             InitializeComponent();
+            currentUser = u;
+            userRepository = userRepo;
             this.flow = flow;
         }
 
@@ -64,19 +69,19 @@ namespace _2.semEksamenProjekt
         // navigation
         void GoToSkema_Click(object sender, RoutedEventArgs e)
         {
-            new EventOverviewWindow().Show();
+            new EventOverviewWindow(currentUser, userRepository).Show();
             Close();
         }
 
         void GoToFlows_Click(object sender, RoutedEventArgs e)
         {
-            new FlowOverviewWindow().Show();
+            new FlowOverviewWindow(currentUser, userRepository).Show();
             Close();
         }
 
         void GoBack_Click(object sender, RoutedEventArgs e)
         {
-            new FlowOverviewWindow().Show();
+            new FlowOverviewWindow(currentUser, userRepository).Show();
             Close();
         }
     }

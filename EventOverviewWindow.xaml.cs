@@ -1,6 +1,7 @@
 using _2.semEksamenProjekt.Repositories;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -24,10 +25,17 @@ namespace _2.semEksamenProjekt
 
         // holder styr på hvilken uge der vises
         DateTime currentMonday;
+        User currentUser;
+        UserRepository userRepository;
 
-        public EventOverviewWindow()
+
+        public EventOverviewWindow(User u, UserRepository userRepo)
         {
             InitializeComponent();
+            currentUser = u;
+            userRepository = userRepo;
+            DeleteButton.Content = $"Delete {currentUser.username}";
+            UpdateButton.Content = $"Update {currentUser.username}";
         }
 
         // laver skemaet
@@ -242,7 +250,7 @@ namespace _2.semEksamenProjekt
         // skifter til flows vinduet
         void GoToFlows_Click(object sender, RoutedEventArgs e)
         {
-            new FlowOverviewWindow().Show();
+            new FlowOverviewWindow(currentUser, userRepository).Show();
             Close();
         }
 
@@ -267,6 +275,27 @@ namespace _2.semEksamenProjekt
                 DayOfWeek.Sunday    => 6,
                 _                   => -1
             };
+        }
+
+        private void DeleteButton_Click(object sender, RoutedEventArgs e)
+        {
+            Debug.WriteLine($"Deleting {currentUser.username}");
+            userRepository.DeleteUser(currentUser);
+            MainWindow window = new MainWindow();
+            window.Show();
+            this.Close();
+        }
+
+        private void UpdateButton_Click(object sender, RoutedEventArgs e)
+        {
+            UpdateUserWindow window = new UpdateUserWindow(currentUser, userRepository);
+            bool? changed = window.ShowDialog();
+
+            if(changed == true)
+            {
+                DeleteButton.Content = $"Delete {currentUser.username}";
+                UpdateButton.Content = $"Update {currentUser.username}";
+            }
         }
     }
 }

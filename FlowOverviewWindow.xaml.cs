@@ -9,10 +9,14 @@ namespace _2.semEksamenProjekt
     {
         FlowRepository flowRepository = new FlowRepository();
         FlowOverview overview = new FlowOverview();
+        User currentUser;
+        UserRepository userRepository;
 
-        public FlowOverviewWindow()
+        public FlowOverviewWindow(User u, UserRepository userRepo)
         {
             InitializeComponent();
+            currentUser = u;
+            userRepository = userRepo;
         }
 
         void WindowLoaded(object sender, RoutedEventArgs e)
@@ -24,7 +28,7 @@ namespace _2.semEksamenProjekt
         // skifter til skema vinduet
         void GoToSkema_Click(object sender, RoutedEventArgs e)
         {
-            new EventOverviewWindow().Show();
+            new EventOverviewWindow(currentUser, userRepository).Show();
             Close();
         }
 
@@ -87,7 +91,7 @@ namespace _2.semEksamenProjekt
             // åbn FlowWindow når man klikker på kortet
             card.MouseUp += (sender, e) =>
             {
-                new FlowWindow(flow).Show();
+                new FlowWindow(currentUser, userRepository, flow).Show();
                 Close();
             };
 

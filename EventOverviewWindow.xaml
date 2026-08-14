@@ -16,11 +16,17 @@
             <!-- skemaet -->
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
 
         <!-- navigationsknapper til at skifte vindue -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="0,0,0,8">
             <Button Content="Skema" Width="70" Margin="0,0,4,0" IsEnabled="False"/>
             <Button Content="Flows" Width="70" Click="GoToFlows_Click"/>
+            <Button x:Name="DeleteButton" Content="Delete User" Padding="10, 0" Margin="50, 0 , 0, 0" HorizontalAlignment="Right" Background="OrangeRed" Click="DeleteButton_Click"/>
+            <Button x:Name="UpdateButton" Content="Update User" Padding="10, 0" Margin="50, 0 , 0, 0" HorizontalAlignment="Right" Background="LawnGreen" Click="UpdateButton_Click"/>
+            
         </StackPanel>
 
         <!-- navigationsknapper -->

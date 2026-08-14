@@ -32,7 +32,7 @@ namespace _2.semEksamenProjekt
             if (user != null)
             {
                 Debug.WriteLine($"Login {user.username}");
-                EventOverviewWindow window = new EventOverviewWindow();
+                EventOverviewWindow window = new EventOverviewWindow(user, userRepository);
                 window.Show();
                 this.Close();
             }
@@ -41,6 +41,12 @@ namespace _2.semEksamenProjekt
                 usernameTextbox.Text = "";
                 passwordTextbox.Text = "";
             }
+        }
+
+        private void CreateUserButton_Click(object sender, RoutedEventArgs e)
+        {
+            CreateUserWindow window = new CreateUserWindow(userRepository);
+            window.ShowDialog();
         }
     }
 }

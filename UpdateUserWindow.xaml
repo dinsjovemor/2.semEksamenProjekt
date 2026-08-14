@@ -1,0 +1,31 @@
+﻿<Window x:Class="_2.semEksamenProjekt.UpdateUserWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:_2.semEksamenProjekt"
+        mc:Ignorable="d"
+        Title="UpdateUserWindow" Height="450" Width="800">
+    <Grid>
+        <StackPanel Orientation="Vertical">
+            <StackPanel Margin="20">
+                <TextBlock Text="Username" />
+                <TextBox Text="" x:Name="UsernameTextBox"/>
+            </StackPanel>
+
+            <StackPanel Margin="20">
+                <TextBlock Text="Password" />
+                <TextBox Text="" x:Name="PasswordTextBox"/>
+            </StackPanel>
+
+            <StackPanel Margin="20">
+                <TextBlock Text="Role" />
+                <TextBox Text="" x:Name="RoleTextBox"/>
+            </StackPanel>
+            
+            <Button Margin="20" Content="Update User" x:Name="ButtonUpdate" Background="LawnGreen" Click="ButtonUpdate_Click" />
+
+          
+        </StackPanel>
+    </Grid>
+</Window>
