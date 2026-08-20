@@ -10,6 +10,6 @@ namespace _2.semEksamenProjekt
         public int year;
         public string education;
         public string city;
-        public List<User> members; //List<User> betyder bare, vi har en liste her der indeholder klassen User
+        public List<User> members;
     }
 }

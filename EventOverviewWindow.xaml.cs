@@ -1,6 +1,4 @@
 using _2.semEksamenProjekt.Repositories;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Windows;
@@ -13,48 +11,55 @@ namespace _2.semEksamenProjekt
     public partial class EventOverviewWindow : Window
     {
         double timeHeight = 60; // pixels pr time vertikalt
-        double dayWidth = 150;  // pixels pr dag horisontalt
-        int days = 7;           // dage på skemaet
-        int startHour = 8;      // hvornår skemaet starter
-        int endHour = 16;       // hvornår skemaet slutter
+        double dayWidth = 145; // pixels pr dag horisontalt
+        int days = 7; // dage på skemaet
+        int startHour = 7; // hvornår skemaet starter
+        int endHour = 18; // hvornår skemaet slutter
 
         EventOverview overview = new EventOverview();
+        IRepositoryFactory factory = new RepositoryFactory();
+        EventRepository repository;
 
-        // repository håndterer alle database funktionerne
-        EventRepository repository = new EventRepository();
-
-        // holder styr på hvilken uge der vises
+        // bruges til at holde styr på hvilken uge der vises
         DateTime currentMonday;
-        User currentUser;
+
         UserRepository userRepository;
 
-
-        public EventOverviewWindow(User u, UserRepository userRepo)
+        public EventOverviewWindow()
         {
+            factory = new RepositoryFactory();
+            repository = factory.CreateEventRepository();
+            userRepository = factory.CreateUserRepository();
             InitializeComponent();
-            currentUser = u;
-            userRepository = userRepo;
-            DeleteButton.Content = $"Delete {currentUser.username}";
-            UpdateButton.Content = $"Update {currentUser.username}";
+            DeleteButton.Content = $"Delete {Session.Instance.CurrentUser.username}";
+            UpdateButton.Content = $"Update {Session.Instance.CurrentUser.username}";
         }
 
         // laver skemaet
-        public void WindowLoaded(object sender, RoutedEventArgs e)
+        public async void WindowLoaded(object sender, RoutedEventArgs e)
         {
             // størrelse på canvas
             int totalHours = endHour - startHour;
-            EventsCanvas.Width  = days * dayWidth;
+            EventsCanvas.Width = days * dayWidth;
             EventsCanvas.Height = totalHours * timeHeight;
 
             // start med den nuværende uge
             currentMonday = GetMonday(DateTime.Today);
 
-            LoadFromDatabase();
+            // skjul tilføj knap hvis brugeren ikke er admin
+            if (!Session.Instance.CanEditEvents)
+            {
+                AddEventButton.Visibility = Visibility.Collapsed;
+            }
 
+            LoadTagFilter();
             DrawTimeLabels();
-
             UpdateWeekAndDates();
 
+            // hent events fra databasen i baggrunden
+            await Task.Run(() => LoadFromDatabase());
+
+            // opdater UI når data er hentet
             RedrawSchedule();
         }
 
@@ -80,7 +85,7 @@ namespace _2.semEksamenProjekt
         }
 
         // opdaterer uge og datoer
-        private void UpdateWeekAndDates()
+        void UpdateWeekAndDates()
         {
             int weekNumber = CultureInfo.CurrentCulture.Calendar.GetWeekOfYear(currentMonday, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
 
@@ -97,7 +102,7 @@ namespace _2.semEksamenProjekt
             }
         }
 
-        // rydder canvas og tegner events for den nuværende uge
+        // rydder skemaet og tegner events for den nuværende uge
         public void RedrawSchedule()
         {
             EventsCanvas.Children.Clear();
@@ -106,15 +111,21 @@ namespace _2.semEksamenProjekt
 
             UpdateWeekAndDates();
 
-            // tegn kun events der ligger i den nuværende uge
+            string selectedTag = TagFilter.SelectedIndex > 0 ? TagFilter.SelectedItem.ToString() : null;
+
+            // tegn kun events der er synlige for brugeren, matcher tag filter og er i den nuværende uge
             foreach (Event ev in overview.AllEvents)
             {
-                if (ev.start >= currentMonday && ev.start < currentMonday.AddDays(7))
+                if (ev.start >= currentMonday && ev.start < currentMonday.AddDays(7)
+                    && Session.Instance.CanSeeEvent(ev)
+                    && MatchesTagFilter(ev.tags, selectedTag))
+                {
                     DrawEvent(ev);
+                }
             }
         }
 
-        
+
         // henter alle events fra databasen
         public void LoadFromDatabase()
         {
@@ -127,13 +138,13 @@ namespace _2.semEksamenProjekt
             {
                 TextBlock label = new TextBlock
                 {
-                    Text              = $"{hour:D2}:00",
-                    Width             = 55,
-                    Height            = timeHeight,
-                    TextAlignment     = TextAlignment.Right,
+                    Text = $"{hour:D2}:00",
+                    Width = 55,
+                    Height = timeHeight,
+                    TextAlignment = TextAlignment.Right,
                     VerticalAlignment = VerticalAlignment.Top,
-                    Padding           = new Thickness(0, 20, 5, 0),
-                    FontSize          = 11
+                    Padding = new Thickness(0, 20, 5, 0),
+                    FontSize = 11
                 };
                 TimeColumn.Children.Add(label);
             }
@@ -149,11 +160,11 @@ namespace _2.semEksamenProjekt
             {
                 Line line = new Line
                 {
-                    X1              = 0,
-                    Y1              = i * timeHeight,
-                    X2              = days * dayWidth,
-                    Y2              = i * timeHeight,
-                    Stroke          = Brushes.LightGray,
+                    X1 = 0,
+                    Y1 = i * timeHeight,
+                    X2 = days * dayWidth,
+                    Y2 = i * timeHeight,
+                    Stroke = Brushes.LightGray,
                     StrokeThickness = 1
                 };
                 EventsCanvas.Children.Add(line);
@@ -164,11 +175,11 @@ namespace _2.semEksamenProjekt
             {
                 Line line = new Line
                 {
-                    X1              = i * dayWidth,
-                    Y1              = 0,
-                    X2              = i * dayWidth,
-                    Y2              = totalHours * timeHeight,
-                    Stroke          = Brushes.Gray,
+                    X1 = i * dayWidth,
+                    Y1 = 0,
+                    X2 = i * dayWidth,
+                    Y2 = totalHours * timeHeight,
+                    Stroke = Brushes.Gray,
                     StrokeThickness = 1
                 };
                 EventsCanvas.Children.Add(line);
@@ -178,26 +189,29 @@ namespace _2.semEksamenProjekt
         public void DrawEvent(Event ev)
         {
             // beregner kolonneindeks ud fra currentMonday
-            // så events altid lander i den rigtige kolonne uanset hvilken uge der vises
+            // så events er i den rigtige kolonne uanset hvilken uge der vises
             int dayIndex = (ev.start.Date - currentMonday).Days;
 
             // crash fix
             if (dayIndex < 0 || dayIndex >= days)
+            {
                 return;
+            }
 
             // y position baseret på starttidspunkt
             double topPos = (ev.start.Hour - startHour + ev.start.Minute / 60.0) * timeHeight;
 
             // højde baseret på varighed
             double durationHours = (ev.end - ev.start).TotalHours;
-            double blockHeight   = durationHours * timeHeight - 4;
+            double blockHeight = durationHours * timeHeight - 4;
 
             // opretter event blokken
             Border block = new Border
             {
-                Width           = dayWidth - 6,
-                Height          = blockHeight,
-                BorderBrush     = Brushes.Gray,
+                Width = dayWidth - 6,
+                Height = blockHeight,
+                Background = Brushes.LightGray,
+                BorderBrush = Brushes.Gray,
                 BorderThickness = new Thickness(1)
             };
 
@@ -206,16 +220,16 @@ namespace _2.semEksamenProjekt
             // titel
             content.Children.Add(new TextBlock
             {
-                Text         = ev.title,
-                FontWeight   = FontWeights.Bold,
+                Text = ev.title,
+                FontWeight = FontWeights.Bold,
                 TextWrapping = TextWrapping.Wrap,
-                FontSize     = 12
+                FontSize = 12
             });
 
             // tidspunkt
             content.Children.Add(new TextBlock
             {
-                Text     = $"{ev.start:HH:mm} – {ev.end:HH:mm}",
+                Text = $"{ev.start:HH:mm} – {ev.end:HH:mm}",
                 FontSize = 11
             });
 
@@ -224,7 +238,7 @@ namespace _2.semEksamenProjekt
             {
                 content.Children.Add(new TextBlock
                 {
-                    Text     = ev.rooms[0],
+                    Text = ev.rooms[0],
                     FontSize = 10
                 });
             }
@@ -234,67 +248,159 @@ namespace _2.semEksamenProjekt
             {
                 content.Children.Add(new TextBlock
                 {
-                    Text     = ev.teachers[0].username,
+                    Text = ev.teachers[0].username,
                     FontSize = 10
                 });
             }
 
             block.Child = content;
 
+            // højreklik menu kun for admin
+            if (Session.Instance.CanEditEvents)
+            {
+                ContextMenu contextMenu = new ContextMenu();
+
+                MenuItem editItem = new MenuItem { Header = "Rediger" };
+                editItem.Click += (s, args) =>
+                {
+                    new NewEventWindow(repository, this, ev).Show();
+                };
+
+                MenuItem deleteItem = new MenuItem { Header = "Slet" };
+                deleteItem.Click += (s, args) =>
+                {
+                    if (MessageBox.Show($"Vil du slette '{ev.title}'?", "Slet event",
+                        MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                    {
+                        repository.DeleteEvent(ev.id);
+                        LoadFromDatabase();
+                        RedrawSchedule();
+                    }
+                };
+
+                contextMenu.Items.Add(editItem);
+                contextMenu.Items.Add(deleteItem);
+                block.ContextMenu = contextMenu;
+            }
+
+            // venstreklik åbner det tilknyttede flow
+            block.MouseLeftButtonUp += (s, args) =>
+            {
+                if (ev.flowId != null)
+                {
+                    Flow flow = factory.CreateFlowRepository().GetFlowById(ev.flowId.Value);
+                    if (flow != null)
+                    {
+                        new FlowWindow(flow).Show();
+                        Close();
+                    }
+                }
+                args.Handled = true;
+            };
+
+            // byg tooltip tekst fra event data
+            string tooltip = $"{ev.title}\n{ev.start:HH:mm} – {ev.end:HH:mm}";
+
+            if (!string.IsNullOrWhiteSpace(ev.description))
+            {
+                tooltip += $"\n\n{ev.description}";
+            }
+
+            if (ev.rooms != null && ev.rooms.Count > 0)
+            {
+                tooltip += $"\nLokale: {string.Join(", ", ev.rooms)}";
+            }
+
+            if (ev.teachers != null && ev.teachers.Count > 0)
+            {
+                tooltip += $"\nUndervisere: {string.Join(", ", ev.teachers.Select(t => t.username))}";
+            }
+
+            if (ev.teams != null && ev.teams.Count > 0)
+            {
+                tooltip += $"\nHold: {string.Join(", ", ev.teams.Select(t => t.teamName))}";
+            }
+
+            block.ToolTip = tooltip;
+
+            ToolTipService.SetInitialShowDelay(block, 0);
+
             Canvas.SetLeft(block, dayIndex * dayWidth + 3);
-            Canvas.SetTop(block,  topPos + 2);
+            Canvas.SetTop(block, topPos + 2);
 
             EventsCanvas.Children.Add(block);
+        }
+
+        // åbner vindue til at oprette nyt event
+        void NewEvent_Click(object sender, RoutedEventArgs e)
+        {
+            new NewEventWindow(repository, this).Show();
         }
 
         // skifter til flows vinduet
         void GoToFlows_Click(object sender, RoutedEventArgs e)
         {
-            new FlowOverviewWindow(currentUser, userRepository).Show();
+            new FlowOverviewWindow().Show();
             Close();
         }
 
-        // fik hjælp fra claude----------------------------------------------------------------------------------------------
+        // indlæser tags i filteret
+        void LoadTagFilter()
+        {
+            TagFilter.Items.Add("Alle tags");
+            foreach (string tag in factory.CreateTagRepository().GetEventTags())
+            {
+                TagFilter.Items.Add(tag);
+            }
+            TagFilter.SelectedIndex = 0;
+        }
+
+        // tegner skemaet om når tag filteret ændres
+        void TagFilter_Changed(object sender, SelectionChangedEventArgs e)
+        {
+            RedrawSchedule();
+        }
+
+        // returnerer true hvis ingen tags er valgt eller eventet har det valgte tag
+        bool MatchesTagFilter(List<string> tags, string selectedTag)
+        {
+            if (selectedTag == null || selectedTag == "Alle tags")
+            {
+                return true;
+            }
+            if (tags == null)
+            {
+                return false;
+            }
+            return tags.Contains(selectedTag);
+        }
+
+        // beregner datoen for mandagen i den uge en given dato ligger i
         public DateTime GetMonday(DateTime date)
         {
             int daysSinceMonday = ((int)date.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
             return date.AddDays(-daysSinceMonday).Date;
         }
 
-        // fik hjælp fra claude ----------------------------------------------------------------------------------------------
-        public int GetDayIndex(DateTime date)
-        {
-            return date.DayOfWeek switch
-            {
-                DayOfWeek.Monday    => 0,
-                DayOfWeek.Tuesday   => 1,
-                DayOfWeek.Wednesday => 2,
-                DayOfWeek.Thursday  => 3,
-                DayOfWeek.Friday    => 4,
-                DayOfWeek.Saturday  => 5,
-                DayOfWeek.Sunday    => 6,
-                _                   => -1
-            };
-        }
-
         private void DeleteButton_Click(object sender, RoutedEventArgs e)
         {
-            Debug.WriteLine($"Deleting {currentUser.username}");
-            userRepository.DeleteUser(currentUser);
-            MainWindow window = new MainWindow();
+            Debug.WriteLine($"Deleting {Session.Instance.CurrentUser.username}");
+            userRepository.DeleteUser(Session.Instance.CurrentUser);
+            //Session.Instance.CurrentUser = default;
+            LoginWindow window = new LoginWindow();
             window.Show();
             this.Close();
         }
 
         private void UpdateButton_Click(object sender, RoutedEventArgs e)
         {
-            UpdateUserWindow window = new UpdateUserWindow(currentUser, userRepository);
+            UpdateUserWindow window = new UpdateUserWindow(Session.Instance.CurrentUser, userRepository);
             bool? changed = window.ShowDialog();
 
-            if(changed == true)
+            if (changed == true)
             {
-                DeleteButton.Content = $"Delete {currentUser.username}";
-                UpdateButton.Content = $"Update {currentUser.username}";
+                DeleteButton.Content = $"Delete {Session.Instance.CurrentUser.username}";
+                UpdateButton.Content = $"Update {Session.Instance.CurrentUser.username}";
             }
         }
     }

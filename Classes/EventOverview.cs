@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace _2.semEksamenProjekt
 {
     public class EventOverview
@@ -20,7 +17,9 @@ namespace _2.semEksamenProjekt
             foreach (Event e in AllEvents) //Vi skal kigge alle event igennem i listen. Klasse, lokal variabelnavn, in er en del af foreach loop, AllEvents listen
             {
                 if (e.tags != null && e.tags.Contains(tag)) //Hvis der er et tag, så skal eventet  
-                    result.Add(e); 
+                {
+                    result.Add(e);
+                }
             }
 
             return result; //Tilføjer resultatet retur til metoden

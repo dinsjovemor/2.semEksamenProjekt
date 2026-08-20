@@ -2,25 +2,26 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Data.Sqlite;
 
-namespace _2.semEksamenProjekt.Repositories
+namespace _2.semEksamenProjekt
 {
     public class EventRepository
     {
         string connectionString = $"Data Source={AppDomain.CurrentDomain.BaseDirectory}2.sem projekt.db";
 
-        // Create: nyt event i databasen ----------------------------------------------------------------
+        // Create: nyt event i databasen
         public void NewEvent(Event ev)
         {
             using SqliteConnection connection = new SqliteConnection(connectionString);
             connection.Open();
 
-            using SqliteCommand command = new SqliteCommand("INSERT INTO Event (Title, Start, End, Description, City) VALUES (@title, @start, @end, @description, @city); SELECT last_insert_rowid();", connection);
+            using SqliteCommand command = new SqliteCommand("INSERT INTO Event (Title, Start, End, Description, City, FlowId) VALUES (@title, @start, @end, @description, @city, @flowId); SELECT last_insert_rowid();", connection);
 
             command.Parameters.AddWithValue("@title", ev.title);
             command.Parameters.AddWithValue("@start", ev.start.ToString("yyyy-MM-dd HH:mm:ss"));
             command.Parameters.AddWithValue("@end", ev.end.ToString("yyyy-MM-dd HH:mm:ss"));
-            command.Parameters.AddWithValue("@description", ev.description); //fjernet ??, da jeg har været inde og lave ændringer til klasserne "description" og "city", så de som standard er oprettet som nye tomme lister
-            command.Parameters.AddWithValue("@city", ev.city);
+            command.Parameters.AddWithValue("@description", ev.description ?? "");
+            command.Parameters.AddWithValue("@city", ev.city ?? "");
+            command.Parameters.AddWithValue("@flowId", ev.flowId.HasValue ? (object)ev.flowId.Value : DBNull.Value);
 
             ev.id = Convert.ToInt32(command.ExecuteScalar());
 
@@ -30,15 +31,15 @@ namespace _2.semEksamenProjekt.Repositories
             InsertTeams(connection, ev);
         }
 
-        // Read: hent alle events fra databasen ------------------------------------------------------
+        // Read: hent alle events fra databasen
         public List<Event> GetAllEvents()
         {
             List<Event> events = new List<Event>();
-
+            
             using SqliteConnection connection = new SqliteConnection(connectionString);
             connection.Open();
 
-            using SqliteCommand command = new SqliteCommand("SELECT Id, Title, Start, End, Description, City FROM Event", connection);
+            using SqliteCommand command = new SqliteCommand("SELECT Id, Title, Start, End, Description, City, FlowId FROM Event", connection);
 
             using SqliteDataReader reader = command.ExecuteReader();
             while (reader.Read())
@@ -49,8 +50,9 @@ namespace _2.semEksamenProjekt.Repositories
                     title = reader.GetString(1),
                     start = DateTime.Parse(reader.GetString(2)),
                     end = DateTime.Parse(reader.GetString(3)),
-                    description = reader.GetString(4),
-                    city = reader.GetString(5)
+                    description = reader.IsDBNull(4) ? null : reader.GetString(4),
+                    city = reader.IsDBNull(5) ? null : reader.GetString(5),
+                    flowId = reader.IsDBNull(6) ? null : reader.GetInt32(6)
                 };
 
                 ev.rooms = GetRooms(connection, ev.id);
@@ -64,13 +66,13 @@ namespace _2.semEksamenProjekt.Repositories
             return events;
         }
 
-        // Update: opdater et eksisterende event i databasen ---------------------------------------------
+        // Update: opdater et eksisterende event i databasen
         public void UpdateEvent(Event ev)
         {
             using SqliteConnection connection = new SqliteConnection(connectionString);
             connection.Open();
 
-            using SqliteCommand command = new SqliteCommand("UPDATE Event SET Title = @title, Start = @start, End = @end, Description = @description, City = @city WHERE Id = @id", connection);
+            using SqliteCommand command = new SqliteCommand("UPDATE Event SET Title = @title, Start = @start, End = @end, Description = @description, City = @city, FlowId = @flowId WHERE Id = @id", connection);
 
             command.Parameters.AddWithValue("@id", ev.id);
             command.Parameters.AddWithValue("@title", ev.title);
@@ -78,6 +80,7 @@ namespace _2.semEksamenProjekt.Repositories
             command.Parameters.AddWithValue("@end", ev.end.ToString("yyyy-MM-dd HH:mm:ss"));
             command.Parameters.AddWithValue("@description", ev.description ?? "");
             command.Parameters.AddWithValue("@city", ev.city ?? "");
+            command.Parameters.AddWithValue("@flowId", ev.flowId.HasValue ? (object)ev.flowId.Value : DBNull.Value);
 
             command.ExecuteNonQuery();
 
@@ -88,7 +91,7 @@ namespace _2.semEksamenProjekt.Repositories
             InsertTeams(connection, ev);
         }
 
-        // Delete: slet et event og relaterede rækker -------------------------------------------------------
+        // Delete: slet et event og relaterede rækker
         public void DeleteEvent(int id)
         {
             using SqliteConnection connection = new SqliteConnection(connectionString);
@@ -102,7 +105,7 @@ namespace _2.semEksamenProjekt.Repositories
             command.ExecuteNonQuery();
         }
 
-        // indsætter relaterede rækker i andre tabeller ----------------------------------------------------
+        // indsætter relaterede rækker i andre tabeller
         void InsertRooms(SqliteConnection connection, Event ev)
         {
             if (ev.rooms == null) return;
@@ -159,7 +162,7 @@ namespace _2.semEksamenProjekt.Repositories
             }
         }
 
-        // læser relaterede rækker fra andre tabeller ----------------------------------------------------------------
+        // læser relaterede rækker fra andre tabeller
         List<string> GetRooms(SqliteConnection connection, int eventId)
         {
             List<string> rooms = new List<string>();
@@ -228,7 +231,7 @@ namespace _2.semEksamenProjekt.Repositories
             return teams;
         }
 
-        // sletter relaterede rækker fra andre tabeller ----------------------------------------------------------------
+        // sletter relaterede rækker fra andre tabeller
         void DeleteRelatedRows(SqliteConnection connection, int eventId)
         {
             foreach (string table in new[] { "Event_Rooms", "Event_Tags", "Event_Teachers", "Event_Teams" })

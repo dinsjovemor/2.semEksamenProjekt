@@ -1,17 +1,14 @@
-using System;
-using System.Collections.Generic;
-
 namespace _2.semEksamenProjekt
 {
     public class Event
     {
-        public int id; //disse er helt almindelige fields, med deklaration direkte i klassen (og heller ingen get; set; accessors som ved properties) 
-        public string title = ""; //field med default "tom" værdi
-        public string description = "";
+        public int id;  //disse er helt almindelige fields, med deklaration direkte i klassen (og heller ingen get; set; accessors som ved properties) 
+        public int? flowId; // tilknyttet flow (null = intet flow)
+        public string title; //field med default "tom" værdi
+        public string description;
         public List<string> rooms;
         public DateTime start;
         public DateTime end;
-        public Flow flowLink;
         public List<User> teachers;
         public string city = String.Empty; //field deklareret/initialized med en default tom string
         public List<Team> teams = new List<Team>(); //field deklareret med default tomme parametre()
@@ -49,7 +46,9 @@ namespace _2.semEksamenProjekt
         {
             int index = overview.AllEvents.IndexOf(oldEvent);
             if (index >= 0)
+            {
                 overview.AllEvents[index] = this;
+            }
         }
     }
 }
